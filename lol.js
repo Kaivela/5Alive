@@ -8,6 +8,11 @@ let playerHands = [];
 let playerLives = [];
 let playerCount = 0;
 let totalPile = 0;
+let total = 0;
+let allowedToPlay = false;
+let gameIsOver = false;
+
+//---------------------------------------------
 
 // demande combien de joueurs jouent
 const enquirer = new Enquirer();
@@ -18,7 +23,6 @@ const response = await enquirer.prompt({
 });
 playerCount = response.joueurs;
 
-//---------------------------------------------
 initDeck();
 initHandsAndLives();
 newRound();
@@ -68,7 +72,7 @@ while (!isGameOver()) {
 
   //joue la carte et passe au tour/round suivant
   if (currentPlayedCard + totalPile > 21) {
-    console.log("can't play this card !! Select another :");
+    console.log("interdit de jouer cette carte !!\nSelectionne en une autre :");
   } else {
     playCard(cardPlayedIndex);
     console.log(
@@ -80,7 +84,7 @@ while (!isGameOver()) {
       } else {
         console.log("le joueur " + (currentPlayer + 2) + " passe son tour !");
       }
-      skipTurn();
+      nextTurn();
     }
 
     if (noCardInHand()) {
@@ -110,7 +114,7 @@ while (!isGameOver()) {
 
 //création des cartes + ajout au deck
 function initDeck() {
-  for (let deckIndex = 0; deckIndex < 55; deckIndex++) {
+  for (let deckIndex = 0; deckIndex < 65; deckIndex++) {
     //deckIndex sera de 77 quand terminé
     if (deckIndex < 8) {
       // 8 cartes : Zéro
@@ -136,7 +140,16 @@ function initDeck() {
     } else if (deckIndex < 47) {
       // 1 carte : Sept
       deck.push(7);
-    } else if (deckIndex < 51) {
+    } else if (deckIndex < 50) {
+      // 3 carte : Egal Zéro
+      deck.push("= 0");
+    } else if (deckIndex < 52) {
+      // 2 carte : Egal Dix
+      deck.push("= 10");
+    } else if (deckIndex < 57) {
+      // 5 cartes : Egal Vingt-et-un
+      deck.push("= 21");
+    } else if (deckIndex < 61) {
       // 4 cartes : Passer son tour
       deck.push("pass");
     } else {
@@ -144,9 +157,8 @@ function initDeck() {
       deck.push("skip");
     }
   }
-  // cartes a ajouter : 22 (7 type)
-  // 2 "+1" --- 2 "+2" + 1 bomb --- 1 redistrib ---
-  // 3 "=0" --- 2 "=10" --- 5 "=21" --- 6 reverseOrder ---
+  // cartes a ajouter : 12 (4 type)
+  // 2 "+1" --- 2 "+2" + 1 bomb --- 1 redistrib --- 6 reverseOrder
 }
 
 //création d'un tableau pour les vies et la main pour chaque joueur
@@ -181,12 +193,15 @@ function drawCard(playerIndex) {
 //jouer une carte
 function playCard(cardPlayedIndex) {
   let cardPlayed = playerHands[currentPlayer].splice(cardPlayedIndex, 1)[0];
+  if (cardPlayed == "= 0" || cardPlayed == "= 10" || cardPlayed == "= 21") {
+    transferPileToDeck();
+  }
   pile.push(cardPlayed);
 }
 
 //calcul du total de la pile
 function computePile() {
-  let total = 0;
+  total = 0;
   for (let pileIndex = 0; pileIndex < pile.length; pileIndex++) {
     // let cardValue = {
     //   joker: 0,
@@ -195,13 +210,18 @@ function computePile() {
 
     let cardValue = pile[pileIndex];
     if (
-      pile[pileIndex] == "joker" ||
       pile[pileIndex] == "pass" ||
-      pile[pileIndex] == "skip"
+      pile[pileIndex] == "skip" ||
+      pile[pileIndex] == "= 0"
     ) {
       cardValue = 0;
     }
-    // if (pile[pileIndex] == "=10") total = 10
+    if (pile[pileIndex] == "= 10") {
+      cardValue = 10;
+    }
+    if (pile[pileIndex] == "= 21") {
+      cardValue = 21;
+    }
     total = total + cardValue;
   }
   return total;
@@ -217,7 +237,6 @@ function nextTurn() {
 
 //joueur courant peut il jouer ?
 function canPlay(totalPile, playerHand) {
-  let allowedToPlay = false;
   for (
     let playerHandIndex = 0;
     playerHandIndex < playerHand.length;
@@ -225,7 +244,9 @@ function canPlay(totalPile, playerHand) {
   ) {
     let cardValue = playerHand[playerHandIndex];
     if (
-      playerHand[playerHandIndex] == "joker" ||
+      playerHand[playerHandIndex] == "= 0" ||
+      playerHand[playerHandIndex] == "= 10" ||
+      playerHand[playerHandIndex] == "= 21" ||
       playerHand[playerHandIndex] == "pass" ||
       playerHand[playerHandIndex] == "skip"
     ) {
@@ -241,13 +262,6 @@ function canPlay(totalPile, playerHand) {
 //le joueur courrant n'a plus de cartes en main
 function noCardInHand() {
   return playerHands[currentPlayer].length == 0;
-}
-
-function skipTurn() {
-  currentPlayer++;
-  if (currentPlayer > playerCount - 1) {
-    currentPlayer = 0;
-  }
 }
 
 //tous les joueurs (sauf le joueur courant) perdent une vie
@@ -271,7 +285,6 @@ function transferPileToDeck() {
 }
 //vérifie si la partie est finie
 function isGameOver() {
-  let gameIsOver = false;
   for (
     let playerLivesIndex = 0;
     playerLivesIndex < playerLives.length;
