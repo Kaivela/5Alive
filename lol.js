@@ -9,8 +9,6 @@ let playerLives = [];
 let playerCount = 0;
 let totalPile = 0;
 let total = 0;
-let allowedToPlay = false;
-let gameIsOver = false;
 
 //---------------------------------------------
 
@@ -70,7 +68,7 @@ while (!isGameOver()) {
   let cardPlayedIndex = Number(select.card);
   let currentPlayedCard = currentHand[cardPlayedIndex];
 
-  //joue la carte et passe au tour/round suivant
+  //joue la carte --> fait son effet --> passe au tour/round suivant
   if (currentPlayedCard + totalPile > 21) {
     console.log("interdit de jouer cette carte !!\nSelectionne en une autre :");
   } else {
@@ -78,6 +76,8 @@ while (!isGameOver()) {
     console.log(
       "joueur " + (currentPlayer + 1) + " joue : " + currentPlayedCard
     );
+
+    //si carte joué == skip
     if (currentPlayedCard == "skip") {
       if (currentPlayer + 1 == playerCount) {
         console.log("le joueur 1 passe son tour !");
@@ -87,6 +87,15 @@ while (!isGameOver()) {
       nextTurn();
     }
 
+    //si carte joué == "+1" ou "+2"
+    if (currentPlayedCard == "+ 1") {
+      eachPlayerDrawCards(1);
+    }
+    if (currentPlayedCard == "+ 2") {
+      eachPlayerDrawCards(2);
+    }
+
+    //si plus de cartes en main après avoir joué
     if (noCardInHand()) {
       console.log(
         "le joueur " +
@@ -114,7 +123,7 @@ while (!isGameOver()) {
 
 //création des cartes + ajout au deck
 function initDeck() {
-  for (let deckIndex = 0; deckIndex < 65; deckIndex++) {
+  for (let deckIndex = 0; deckIndex < 69; deckIndex++) {
     //deckIndex sera de 77 quand terminé
     if (deckIndex < 8) {
       // 8 cartes : Zéro
@@ -149,7 +158,13 @@ function initDeck() {
     } else if (deckIndex < 57) {
       // 5 cartes : Egal Vingt-et-un
       deck.push("= 21");
+    } else if (deckIndex < 59) {
+      // 2 cartes : chaque joueur pioche 1 carte
+      deck.push("+ 1");
     } else if (deckIndex < 61) {
+      // 2 cartes : chaque joueur pioche 1 carte
+      deck.push("+ 2");
+    } else if (deckIndex < 65) {
       // 4 cartes : Passer son tour
       deck.push("pass");
     } else {
@@ -157,8 +172,8 @@ function initDeck() {
       deck.push("skip");
     }
   }
-  // cartes a ajouter : 12 (4 type)
-  // 2 "+1" --- 2 "+2" + 1 bomb --- 1 redistrib --- 6 reverseOrder
+  // cartes a ajouter : 8 (3 type)
+  // 1 bomb --- 1 shuffle hands --- 6 invert
 }
 
 //création d'un tableau pour les vies et la main pour chaque joueur
@@ -176,15 +191,17 @@ function newRound() {
   deck = [];
   initDeck();
   shuffleDeck();
-  give10CardsToEachPlayer();
+  eachPlayerDrawCards(10);
 }
 
+//Mélanger le deck
 function shuffleDeck() {
   deck.sort(function () {
     return 0.5 - Math.random();
   });
 }
 
+//Piocher une carte
 function drawCard(playerIndex) {
   const cardDrawn = deck.shift();
   playerHands[playerIndex].push(cardDrawn);
@@ -210,9 +227,14 @@ function computePile() {
 
     let cardValue = pile[pileIndex];
     if (
+      pile[pileIndex] == "shuffle hands" ||
+      pile[pileIndex] == "invert" ||
+      pile[pileIndex] == "bomb" ||
       pile[pileIndex] == "pass" ||
       pile[pileIndex] == "skip" ||
-      pile[pileIndex] == "= 0"
+      pile[pileIndex] == "= 0" ||
+      pile[pileIndex] == "+ 1" ||
+      pile[pileIndex] == "+ 2"
     ) {
       cardValue = 0;
     }
@@ -237,6 +259,7 @@ function nextTurn() {
 
 //joueur courant peut il jouer ?
 function canPlay(totalPile, playerHand) {
+  let allowedToPlay = false;
   for (
     let playerHandIndex = 0;
     playerHandIndex < playerHand.length;
@@ -244,11 +267,16 @@ function canPlay(totalPile, playerHand) {
   ) {
     let cardValue = playerHand[playerHandIndex];
     if (
+      playerHand[playerHandIndex] == "shuffle hands" ||
+      playerHand[playerHandIndex] == "bomb" ||
+      playerHand[playerHandIndex] == "invert" ||
+      playerHand[playerHandIndex] == "pass" ||
+      playerHand[playerHandIndex] == "skip" ||
       playerHand[playerHandIndex] == "= 0" ||
       playerHand[playerHandIndex] == "= 10" ||
       playerHand[playerHandIndex] == "= 21" ||
-      playerHand[playerHandIndex] == "pass" ||
-      playerHand[playerHandIndex] == "skip"
+      playerHand[playerHandIndex] == "+ 1" ||
+      playerHand[playerHandIndex] == "+ 2"
     ) {
       cardValue = 0;
     }
@@ -285,6 +313,7 @@ function transferPileToDeck() {
 }
 //vérifie si la partie est finie
 function isGameOver() {
+  let gameIsOver = false;
   for (
     let playerLivesIndex = 0;
     playerLivesIndex < playerLives.length;
@@ -306,8 +335,17 @@ function emptyAllHands() {
   }
 }
 
-function give10CardsToEachPlayer() {
-  for (let x = 0; x < 10; x++) {
+function eachPlayerDrawCards(count) {
+  if (count == 1 || count == 2) {
+    console.log(
+      "Chaque joueur pioche " +
+        count +
+        " carte" +
+        (count == 2 ? "s" : "") +
+        " !"
+    );
+  }
+  for (let x = 0; x < count; x++) {
     for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
       drawCard(playerIndex);
     }
