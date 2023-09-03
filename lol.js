@@ -75,6 +75,8 @@ while (!isGameOver()) {
       }
       console.log({ reverseOrder });
     }
+
+    //si carte joué == shuffle hands
     if (currentPlayedCard == "shuffle hands") {
       if (noCardInHand()) {
         console.log(
@@ -99,8 +101,34 @@ while (!isGameOver()) {
       }
     }
 
+    //si carte joué == bomb
+    if (currentPlayedCard == "bomb") {
+      playBomb();
+      // for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+      //   if (playerIndex == currentPlayer) continue;
+      //   if (haveZero(currentHand) == true) {
+      //     console.log(
+      //       "le joueur " + (playerIndex + 1) + " se déffausser d'une carte 0"
+      //     );
+      //   }
+
+      //   // manque le code pour que le joueur retire le 0 ciblé de sa main
+      //   // manque le code pour ajouter cette derniere a la pile
+
+      //   // sinon perd une vie
+      //   else {
+      //     console.log(
+      //       "le joueur " +
+      //         (playerIndex + 1) +
+      //         " ne peut se déffausser d'une carte 0\nIl perd donc une vie !"
+      //     );
+      //     playerLives[playerIndex]--;
+      //   }
+      // }
+    }
+
+    //si carte joué == "+1" ou "+2"
     if (currentPlayedCard == "+ 1") {
-      //si carte joué == "+1" ou "+2"
       eachPlayerDrawCards(1);
     }
     if (currentPlayedCard == "+ 2") {
@@ -135,7 +163,7 @@ while (!isGameOver()) {
 
 //création des cartes + ajout au deck
 function initDeck() {
-  for (let deckIndex = 0; deckIndex < 76; deckIndex++) {
+  for (let deckIndex = 0; deckIndex < 77; deckIndex++) {
     //deckIndex sera de 77 quand terminé
     if (deckIndex < 8) {
       // 8 cartes : Zéro
@@ -150,7 +178,7 @@ function initDeck() {
       // 8 cartes : Trois
       deck.push(3);
     } else if (deckIndex < 40) {
-      // 8 cartes : Quatres
+      // 8 cartes : Quatre
       deck.push(4);
     } else if (deckIndex < 44) {
       // 4 cartes : Cinq
@@ -171,18 +199,21 @@ function initDeck() {
       // 5 cartes : Egal Vingt-et-un
       deck.push("= 21");
     } else if (deckIndex < 59) {
-      // 2 cartes : chaque joueur pioche 1 carte
+      // 2 cartes : Chaque joueur pioche 1 carte
       deck.push("+ 1");
     } else if (deckIndex < 61) {
-      // 2 cartes : chaque joueur pioche 2 cartes
+      // 2 cartes : Chaque joueur pioche 2 cartes
       deck.push("+ 2");
     } else if (deckIndex < 67) {
-      // 6 cartes : changer le sens de jeu
+      // 6 cartes : Changer le sens de jeu
       deck.push("invert");
     } else if (deckIndex < 68) {
-      // 1 carte : réunir les mains de tous les joueurs dans un pack et les redistribuer
+      // 1 carte : Réunir les cartes de tous les joueurs dans un pack et les redistribuer
       deck.push("shuffle hands");
-    } else if (deckIndex < 72) {
+    } else if (deckIndex < 69) {
+      // 1 carte : Bombe
+      deck.push("bomb");
+    } else if (deckIndex < 73) {
       // 4 cartes : Passer son tour
       deck.push("pass");
     } else {
@@ -190,12 +221,6 @@ function initDeck() {
       deck.push("skip");
     }
   }
-  // cartes a ajouter : 1 (1 type)
-
-  // 1 bomb :
-  // Tous les autres joueurs --> défausser d'un 0.
-  // sinon playerLives[playerIndex]--
-  // Le total est remis à zéro
 }
 
 //création d'un tableau pour les vies et la main pour chaque joueur
@@ -206,6 +231,7 @@ function initHandsAndLives() {
   }
 }
 
+//Nouveau Round
 function newRound() {
   console.log("\nNous débutons un nouveau round");
   emptyAllHands();
@@ -229,6 +255,60 @@ function drawCard(playerIndex) {
   playerHands[playerIndex].push(cardDrawn);
 }
 
+// selection d'une carte
+async function selectCard() {
+  const enquirer = new Enquirer();
+  const currentHand = playerHands[currentPlayer];
+  const playerHand = currentHand.map((card, index) => {
+    //
+    return {
+      message: String(card),
+      name: String(index),
+      value: String(index),
+    };
+  });
+
+  const select = await enquirer.prompt({
+    type: "select",
+    name: "card",
+    message: " : choisis une carte à jouer",
+    choices: playerHand,
+  });
+  let cardPlayedIndex = Number(select.card);
+  let currentPlayedCard = currentHand[cardPlayedIndex];
+  return { currentPlayedCard, cardPlayedIndex };
+}
+
+//joueur courant peut il jouer ?
+function canPlay(totalPile, playerHand) {
+  let allowedToPlay = false;
+  for (
+    let playerHandIndex = 0;
+    playerHandIndex < playerHand.length;
+    playerHandIndex++
+  ) {
+    let cardValue = playerHand[playerHandIndex];
+    if (
+      playerHand[playerHandIndex] == "shuffle hands" ||
+      playerHand[playerHandIndex] == "bomb" ||
+      playerHand[playerHandIndex] == "invert" ||
+      playerHand[playerHandIndex] == "pass" ||
+      playerHand[playerHandIndex] == "skip" ||
+      playerHand[playerHandIndex] == "= 0" ||
+      playerHand[playerHandIndex] == "= 10" ||
+      playerHand[playerHandIndex] == "= 21" ||
+      playerHand[playerHandIndex] == "+ 1" ||
+      playerHand[playerHandIndex] == "+ 2"
+    ) {
+      cardValue = 0;
+    }
+    if (cardValue + totalPile <= 21) {
+      allowedToPlay = true;
+    }
+  }
+  return allowedToPlay;
+}
+
 //jouer une carte
 function playCard(cardPlayedIndex) {
   let cardPlayed = playerHands[currentPlayer].splice(cardPlayedIndex, 1)[0];
@@ -242,11 +322,6 @@ function playCard(cardPlayedIndex) {
 function computePile() {
   total = 0;
   for (let pileIndex = 0; pileIndex < pile.length; pileIndex++) {
-    // let cardValue = {
-    //   joker: 0,
-    //   pass: 0
-    // }[pile[pileIndex]] || pile[pileIndex];
-
     let cardValue = pile[pileIndex];
     if (
       pile[pileIndex] == "shuffle hands" ||
@@ -286,36 +361,6 @@ function nextTurn() {
   }
 }
 
-//joueur courant peut il jouer ?
-function canPlay(totalPile, playerHand) {
-  let allowedToPlay = false;
-  for (
-    let playerHandIndex = 0;
-    playerHandIndex < playerHand.length;
-    playerHandIndex++
-  ) {
-    let cardValue = playerHand[playerHandIndex];
-    if (
-      playerHand[playerHandIndex] == "shuffle hands" ||
-      playerHand[playerHandIndex] == "bomb" ||
-      playerHand[playerHandIndex] == "invert" ||
-      playerHand[playerHandIndex] == "pass" ||
-      playerHand[playerHandIndex] == "skip" ||
-      playerHand[playerHandIndex] == "= 0" ||
-      playerHand[playerHandIndex] == "= 10" ||
-      playerHand[playerHandIndex] == "= 21" ||
-      playerHand[playerHandIndex] == "+ 1" ||
-      playerHand[playerHandIndex] == "+ 2"
-    ) {
-      cardValue = 0;
-    }
-    if (cardValue + totalPile <= 21) {
-      allowedToPlay = true;
-    }
-  }
-  return allowedToPlay;
-}
-
 //le joueur courrant n'a plus de cartes en main
 function noCardInHand() {
   return playerHands[currentPlayer].length == 0;
@@ -323,16 +368,10 @@ function noCardInHand() {
 
 //tous les joueurs (sauf le joueur courant) perdent une vie
 function decreaseOpponentsLives() {
-  // players.forEach(function (el, index) {
-  //   if (playerIndex == currentPlayer) return;
-  //   playerLives[index]--;
-  // })
   for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
     if (playerIndex == currentPlayer) continue;
     playerLives[playerIndex]--;
   }
-
-  // code suivant
 }
 
 //vide la pile et l'ajoute au deck
@@ -357,6 +396,7 @@ function isGameOver() {
   return gameIsOver;
 }
 
+//vider la main de chaque joueur
 function emptyAllHands() {
   playerHands = [];
   for (let x = 0; x < playerCount; x++) {
@@ -364,6 +404,7 @@ function emptyAllHands() {
   }
 }
 
+// chaque joueur pioche X carte(s)
 function eachPlayerDrawCards(count) {
   if (count == 1 || count == 2) {
     console.log(
@@ -390,30 +431,6 @@ async function askPlayerCount() {
     message: "combien de joueurs etes vous?",
   });
   playerCount = Number(response.joueurs);
-}
-
-// selection d'une carte
-async function selectCard() {
-  const enquirer = new Enquirer();
-  const currentHand = playerHands[currentPlayer];
-  const playerHand = currentHand.map((card, index) => {
-    //
-    return {
-      message: String(card),
-      name: String(index),
-      value: String(index),
-    };
-  });
-
-  const select = await enquirer.prompt({
-    type: "select",
-    name: "card",
-    message: " : choisis une carte à jouer",
-    choices: playerHand,
-  });
-  let cardPlayedIndex = Number(select.card);
-  let currentPlayedCard = currentHand[cardPlayedIndex];
-  return { currentPlayedCard, cardPlayedIndex };
 }
 
 //mettre les cartes dans un pack
@@ -480,9 +497,67 @@ function playShuffleHands() {
   console.log(
     "le joueur " +
       (currentPlayer + 1) +
-      " distribue le pack en commencant par le joueur suivant"
+      " distribue le pack en commencant par le joueur à sa gauche"
   );
   dealPack();
   console.log("le total est remis à 0");
   transferPileToDeck();
+}
+
+//joue la carte bombe
+function playBomb() {
+  for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+    const currentHand = playerHands[playerIndex];
+    if (playerIndex == currentPlayer) continue;
+    //si possède une carte 0 alors l'envoie vers la pile
+    if (haveZero(currentHand) == true) {
+      console.log(
+        "le joueur " + (playerIndex + 1) + " se déffausser d'une carte 0"
+      );
+      // trouver l'index du premier 0 qu'il y a dans sa main
+      const cardIndex = currentHand.findIndex(function isZero(card) {
+        return card == 0;
+      });
+
+      // index trouvé --> dégager la carte de sa main avec splice
+      playerHands[playerIndex].splice(cardIndex, 1);
+
+      // push un 0 dans la pile
+      pile.push(0);
+    }
+    // sinon perd une vie
+    else {
+      console.log(
+        "le joueur " +
+          (playerIndex + 1) +
+          " ne peut se déffausser d'une carte 0\nIl perd donc une vie !"
+      );
+      playerLives[playerIndex]--;
+    }
+  }
+  console.log("***Rappel :");
+  for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+    console.log(
+      "Nombre de vie du joueur " +
+        (playerIndex + 1) +
+        ": " +
+        playerLives[playerIndex]
+    );
+  }
+  console.log("le total est remis à 0");
+  transferPileToDeck();
+}
+
+// parcours la main pour vérifier si celle ci contient une carte 0
+function haveZero(playerHand) {
+  let haveZeroInHand = false;
+
+  for (let cardIndex = 0; cardIndex < playerHand.length; cardIndex++) {
+    let cardValue = playerHand[cardIndex];
+    if (cardValue == 0) {
+      haveZeroInHand = true;
+    }
+  }
+  console.log({ haveZeroInHand });
+  return haveZeroInHand;
 }
