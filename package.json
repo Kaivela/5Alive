@@ -1,0 +1,9 @@
+{
+  "type": "module",
+  "dependencies": {
+    "enquirer": "^2.4.1"
+  },
+  "devDependencies": {
+    "eslint": "^8.47.0"
+  }
+}
