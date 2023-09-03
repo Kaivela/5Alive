@@ -3,24 +3,18 @@ import Enquirer from "enquirer";
 //déclaration de variables globaless
 let deck = [];
 let pile = [];
+let pack = [];
 let currentPlayer = 0;
 let playerHands = [];
 let playerLives = [];
 let playerCount = 0;
 let totalPile = 0;
 let total = 0;
+let reverseOrder = false;
 
 //---------------------------------------------
 
-// demande combien de joueurs jouent
-const enquirer = new Enquirer();
-const response = await enquirer.prompt({
-  type: "input",
-  name: "joueurs",
-  message: "combien de joueurs etes vous?",
-});
-playerCount = response.joueurs;
-
+await askPlayerCount();
 initDeck();
 initHandsAndLives();
 newRound();
@@ -39,7 +33,7 @@ while (!isGameOver()) {
     console.log(
       "joueur " +
         (currentPlayer + 1) +
-        " perd une vie ! nombre de vie restant : " +
+        " ne peux pas jouer et perd une vie !\nnombre de vie restant : " +
         playerLives[currentPlayer] +
         "\nle total de la pile revient à 0"
     );
@@ -48,25 +42,10 @@ while (!isGameOver()) {
     nextTurn();
     continue; // redémarre la boucle au début
   }
-
-  // selection d'une carte valide
-  const playerHand = currentHand.map((card, index) => {
-    //
-    return {
-      message: String(card),
-      name: String(index),
-      value: String(index),
-    };
-  });
-
-  const select = await enquirer.prompt({
-    type: "select",
-    name: "card",
-    message: " : choisis une carte à jouer",
-    choices: playerHand,
-  });
-  let cardPlayedIndex = Number(select.card);
-  let currentPlayedCard = currentHand[cardPlayedIndex];
+  const { cardPlayedIndex, currentPlayedCard } = await selectCard();
+  // const cardObject = await selectCard();
+  // const currentPlayedCard = cardObject.currentPlayedCard;
+  // const cardPlayedIndex = cardObject.cardPlayedIndex;
 
   //joue la carte --> fait son effet --> passe au tour/round suivant
   if (currentPlayedCard + totalPile > 21) {
@@ -87,8 +66,41 @@ while (!isGameOver()) {
       nextTurn();
     }
 
-    //si carte joué == "+1" ou "+2"
+    //si carte joué == invert
+    if (currentPlayedCard == "invert") {
+      if (reverseOrder == false) {
+        reverseOrder = true;
+      } else {
+        reverseOrder = false;
+      }
+      console.log({ reverseOrder });
+    }
+    if (currentPlayedCard == "shuffle hands") {
+      if (noCardInHand()) {
+        console.log(
+          "le joueur " +
+            (currentPlayer + 1) +
+            " n'a plus de cartes en main !" +
+            "\nChaque autre joueur perd une vie!\n"
+        );
+        decreaseOpponentsLives();
+        console.log("***Rappel :");
+        for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+          console.log(
+            "Nombre de vie du joueur " +
+              (playerIndex + 1) +
+              ": " +
+              playerLives[playerIndex]
+          );
+        }
+        newRound();
+      } else {
+        playShuffleHands();
+      }
+    }
+
     if (currentPlayedCard == "+ 1") {
+      //si carte joué == "+1" ou "+2"
       eachPlayerDrawCards(1);
     }
     if (currentPlayedCard == "+ 2") {
@@ -123,7 +135,7 @@ while (!isGameOver()) {
 
 //création des cartes + ajout au deck
 function initDeck() {
-  for (let deckIndex = 0; deckIndex < 69; deckIndex++) {
+  for (let deckIndex = 0; deckIndex < 76; deckIndex++) {
     //deckIndex sera de 77 quand terminé
     if (deckIndex < 8) {
       // 8 cartes : Zéro
@@ -150,10 +162,10 @@ function initDeck() {
       // 1 carte : Sept
       deck.push(7);
     } else if (deckIndex < 50) {
-      // 3 carte : Egal Zéro
+      // 3 cartes : Egal Zéro
       deck.push("= 0");
     } else if (deckIndex < 52) {
-      // 2 carte : Egal Dix
+      // 2 cartes : Egal Dix
       deck.push("= 10");
     } else if (deckIndex < 57) {
       // 5 cartes : Egal Vingt-et-un
@@ -162,9 +174,15 @@ function initDeck() {
       // 2 cartes : chaque joueur pioche 1 carte
       deck.push("+ 1");
     } else if (deckIndex < 61) {
-      // 2 cartes : chaque joueur pioche 1 carte
+      // 2 cartes : chaque joueur pioche 2 cartes
       deck.push("+ 2");
-    } else if (deckIndex < 65) {
+    } else if (deckIndex < 67) {
+      // 6 cartes : changer le sens de jeu
+      deck.push("invert");
+    } else if (deckIndex < 68) {
+      // 1 carte : réunir les mains de tous les joueurs dans un pack et les redistribuer
+      deck.push("shuffle hands");
+    } else if (deckIndex < 72) {
       // 4 cartes : Passer son tour
       deck.push("pass");
     } else {
@@ -172,8 +190,12 @@ function initDeck() {
       deck.push("skip");
     }
   }
-  // cartes a ajouter : 8 (3 type)
-  // 1 bomb --- 1 shuffle hands --- 6 invert
+  // cartes a ajouter : 1 (1 type)
+
+  // 1 bomb :
+  // Tous les autres joueurs --> défausser d'un 0.
+  // sinon playerLives[playerIndex]--
+  // Le total est remis à zéro
 }
 
 //création d'un tableau pour les vies et la main pour chaque joueur
@@ -251,9 +273,16 @@ function computePile() {
 
 //tour du joueur suivant
 function nextTurn() {
-  currentPlayer++;
-  if (currentPlayer > playerCount - 1) {
-    currentPlayer = 0;
+  if (reverseOrder) {
+    currentPlayer--;
+    if (currentPlayer < 0) {
+      currentPlayer = playerCount - 1;
+    }
+  } else {
+    currentPlayer++;
+    if (currentPlayer > playerCount - 1) {
+      currentPlayer = 0;
+    }
   }
 }
 
@@ -341,7 +370,7 @@ function eachPlayerDrawCards(count) {
       "Chaque joueur pioche " +
         count +
         " carte" +
-        (count == 2 ? "s" : "") +
+        (count >= 2 ? "s" : "") +
         " !"
     );
   }
@@ -351,5 +380,109 @@ function eachPlayerDrawCards(count) {
     }
   }
 }
-// console.log({ deck });
-// console.log({ playerHands });
+
+// demande combien de joueurs jouent
+async function askPlayerCount() {
+  const enquirer = new Enquirer();
+  const response = await enquirer.prompt({
+    type: "input",
+    name: "joueurs",
+    message: "combien de joueurs etes vous?",
+  });
+  playerCount = Number(response.joueurs);
+}
+
+// selection d'une carte
+async function selectCard() {
+  const enquirer = new Enquirer();
+  const currentHand = playerHands[currentPlayer];
+  const playerHand = currentHand.map((card, index) => {
+    //
+    return {
+      message: String(card),
+      name: String(index),
+      value: String(index),
+    };
+  });
+
+  const select = await enquirer.prompt({
+    type: "select",
+    name: "card",
+    message: " : choisis une carte à jouer",
+    choices: playerHand,
+  });
+  let cardPlayedIndex = Number(select.card);
+  let currentPlayedCard = currentHand[cardPlayedIndex];
+  return { currentPlayedCard, cardPlayedIndex };
+}
+
+//mettre les cartes dans un pack
+function transferHandsToPack() {
+  for (let playerIndex = 0; playerIndex < playerCount; playerIndex++) {
+    // console.log({ player: playerIndex + 1 });
+    // console.log({ pack });
+    // console.log({ playerhand: playerHands[playerIndex] });
+    console.log(
+      "le joueur " + (playerIndex + 1) + " met ses cartes dans le pack"
+    );
+    pack = pack.concat(playerHands[playerIndex]);
+    // console.log({ pack });
+    playerHands[playerIndex] = [];
+    // console.log({ playerhand: playerHands[playerIndex] });
+    // console.log("--------------------");
+  }
+  // console.log({ playerHands });
+  // console.log("les mains doivent etre vides !!!");
+  // console.log({ pack });
+  // console.log("le pack doit etre plein !!!");
+}
+
+//Mélanger le pack
+function shufflePack() {
+  pack.sort(function () {
+    return 0.5 - Math.random();
+  });
+}
+
+//distribuer le pack en commencant par la gauche
+function dealPack() {
+  // console.log({ shufflePlayer: currentPlayer + 1 });
+  let playerIndex = currentPlayer;
+  while (pack.length > 0) {
+    playerIndex++;
+    if (playerIndex > playerCount - 1) {
+      playerIndex = 0;
+    }
+    // console.log("********************");
+    // console.log({ pack });
+    const cardDrawn = pack.shift();
+    // console.log({ player: playerIndex + 1 });
+    // console.log("--------------------");
+    // console.log({ playerhand: playerHands[playerIndex] });
+    playerHands[playerIndex].push(cardDrawn);
+    // console.log("--------------------");
+    // console.log({ playerhand: playerHands[playerIndex] });
+    // console.log({ pack });
+    // console.log("********************\n");
+  }
+  // console.log({ pack });
+  // console.log("le pack doit etre vide !!!");
+  // console.log({ playerHands });
+  // console.log("les mains doivent etre pleines !!!");
+}
+
+function playShuffleHands() {
+  transferHandsToPack();
+  shufflePack();
+  // console.log("le pack a du être mélangé ?");
+  // console.log({ pack });
+  // console.log("--------------------");
+  console.log(
+    "le joueur " +
+      (currentPlayer + 1) +
+      " distribue le pack en commencant par le joueur suivant"
+  );
+  dealPack();
+  console.log("le total est remis à 0");
+  transferPileToDeck();
+}
