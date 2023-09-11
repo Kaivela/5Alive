@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5 Alive Online</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/ico" href="img/icon32x32h.ico" />
+  </head>
+  <body>
+    <div id="output"></div>
+    <form onsubmit="sendMessage()">
+      <input type="text" id="name" placeholder="Entrez votre nom" />
+      <input type="text" id="message" placeholder="Entrez votre message" />
+      <button type="submit" id="send">send</button>
+    </form>
+    <script>
+      const roomId = location.pathname.split("/")[2];
+      const evtSource = new EventSource("/api/events/" + roomId);
+      const outputElement = document.getElementById("output");
+      const messageElement = document.getElementById("message");
+      const nameElement = document.getElementById("name");
+      const sendElement = document.getElementById("send");
+
+      loadMessages();
+
+      sendElement.addEventListener("click", sendMessage);
+
+      async function loadMessages() {
+        const oldMessagesResponse = await fetch("/api/chat/" + roomId);
+        const oldMessages = await oldMessagesResponse.json();
+
+        for (let index = 0; index < oldMessages.length; index++) {
+          const element = oldMessages[index];
+          displayMessage(element.name, element.message);
+        }
+      }
+
+      async function sendMessage(event) {
+        event.preventDefault();
+        const name = nameElement.value;
+        const message = messageElement.value;
+        messageElement.value = "";
+        messageElement.focus();
+        const dataToSend = {
+          name,
+          message,
+        };
+        const options = {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(dataToSend),
+        };
+        const response = await fetch("/api/chat/" + roomId, options);
+      }
+
+      function displayMessage(name, message) {
+        const messageDiv = document.createElement("div");
+        const messageNode = document.createTextNode(name + " : " + message);
+        messageDiv.appendChild(messageNode);
+        messageDiv.className = "message";
+        outputElement.appendChild(messageDiv);
+      }
+
+      evtSource.onmessage = function (event) {
+        const { name, message } = JSON.parse(event.data);
+        displayMessage(name, message);
+      };
+    </script>
+  </body>
+</html>

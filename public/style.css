@@ -1,0 +1,16 @@
+html {
+  background-color: white;
+  font-family: monospace;
+}
+
+#output {
+  border: 2px solid black;
+  width: 500px;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 10px;
+}
+
+.message {
+  color: green;
+}
