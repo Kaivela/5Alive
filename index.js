@@ -35,8 +35,8 @@ const rooms = {
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
-app.use("/room/:roomId", express.static("public"));
 app.use(cors());
+app.use("/room/:roomId", express.static("public"));
 
 app.post("/api/chat/:roomId", handleChat);
 
@@ -52,6 +52,7 @@ app.listen(port, () => {
 });
 
 /**
+ * une fonction qui gère le chat
  * @param {express.Request} request
  * @param {express.Response} response
  */

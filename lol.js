@@ -468,7 +468,7 @@ function playBomb() {
     if (playerIndex == currentPlayer) continue;
     console.log({ Player: playerIndex + 1 });
     //si possède une carte 0 alors l'envoie vers la pile
-    if (haveZero(currentHand) == true) {
+    if (haveZero(currentHand)) {
       console.log(
         "le joueur " + (playerIndex + 1) + " se déffausser d'une carte 0"
       );
