@@ -6,40 +6,20 @@ import cors from "cors";
 const app = express();
 const port = 3000;
 const rooms = {
-  toto: {
-    messages: [],
-    clients: [],
-  },
-  tata: {
+  Default_Room: {
     messages: [],
     clients: [],
   },
 };
-// const messages = [];
-// let clients = [];
-
-// user va sur /
-// il voit une page qui :
-// liste les rooms + possibilité de rejoindre existante
-// donne la possibilité d'en créer une custom
-// donne la possibilité d'en créer une random
-
-// user va sur /room/<new random id>
-// new random room crée - ***ok***
-
-// user va sur /room/<existing id>
-// il peut chat avec cette room - ***ok***
-
-// user va sur /room/<new custom id>
-// la room est crée - ***ok***
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(cors());
-app.use("/room/:roomId", express.static("public"));
+
+app.use("/", express.static("publicHome"));
+app.use("/room/:roomId", express.static("publicRoom"));
 
 app.post("/api/chat/:roomId", handleChat);
-
 app.get("/api/rooms", getRooms);
 app.get("/api/events/:roomId", eventsHandler);
 app.get("/api/chat/:roomId", getMessages);
@@ -48,7 +28,7 @@ app.get("/api/create/:roomId", handleCreateCustomRoom);
 app.get("/api/create", handleCreateRandomRoom);
 
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`);
+  console.log(`Example app listening on port http://localhost:${port}`);
 });
 
 /**
@@ -149,23 +129,13 @@ function handleCreateRandomRoom(request, response) {
     messages: [],
     clients: [],
   };
-  response.send("ok");
+  response.send(String(roomId));
 }
 
 function createRandomId() {
-  const roomId = Math.round(Math.random() * 1_000_000_000);
+  const roomId = Math.round(Math.random() * 1_000);
   if (rooms[roomId] !== undefined) {
     return createRandomId();
   }
   return roomId;
 }
-
-// user va sur /
-// il voit une page qui :
-
-// liste les rooms + possibilité de rejoindre existante
-
-// donne la possibilité d'en créer une custom
-// <button type="button" id="custom">Créer votre salle</button>
-// donne la possibilité d'en créer une random
-// <button type="button" id="random">Créer une salle aléatoire</button>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>5 Alive Online</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/ico" href="img/icon32x32h.ico" />
+  </head>
+  <body>
+    <div class="roomList">
+      <h1>Room List</h1>
+    </div>
+    <div class="create-room">
+      <div>
+        <button class="custom" onclick="createCustomRoom()" disabled>
+          Create Custom Room
+        </button>
+        <input type="text" placeholder="Your custom name" />
+        <span class="error hidden">cette room existe déjà</span>
+      </div>
+      <button onclick="createRandomRoom()">Create Random Room</button>
+    </div>
+    <script>
+      const input = document.querySelector("input");
+      const error = document.querySelector(".error");
+      const customButton = document.querySelector(".custom");
+      input.addEventListener("keyup", handleInputKeyUp);
+      loadRoomList();
+      async function loadRoomList() {
+        const roomListResponse = await fetch("/api/rooms/");
+        const roomList = await roomListResponse.json();
+
+        for (let roomIndex = 0; roomIndex < roomList.length; roomIndex++) {
+          const room = roomList[roomIndex];
+          displayRoom(room);
+        }
+      }
+
+      function displayRoom(roomName) {
+        const roomList = document.querySelector("div.roomList");
+        const roomDiv = document.createElement("div");
+        const roomLink = document.createElement("a");
+        roomLink.href = `/room/${roomName}`;
+        const textNode = document.createTextNode(roomName);
+        roomLink.appendChild(textNode);
+        roomDiv.appendChild(roomLink);
+        roomList.appendChild(roomDiv);
+      }
+
+      async function createRandomRoom() {
+        const createResponse = await fetch("/api/create");
+        const roomId = await createResponse.text();
+        location.pathname = `/room/${roomId}`;
+      }
+
+      async function createCustomRoom() {
+        const roomName = input.value;
+        const createResponse = await fetch(`/api/create/${roomName}`);
+        if (createResponse.status !== 409) {
+          // pas d'erreur
+          location.pathname = `/room/${roomName}`;
+        } else {
+          error.classList.remove("hidden");
+          input.focus();
+        }
+      }
+
+      function handleInputKeyUp(event) {
+        error.classList.add("hidden");
+        if (event.target.value === "") {
+          customButton.disabled = true;
+        } else {
+          customButton.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -31,8 +31,8 @@
         const oldMessages = await oldMessagesResponse.json();
 
         for (let index = 0; index < oldMessages.length; index++) {
-          const element = oldMessages[index];
-          displayMessage(element.name, element.message);
+          const message = oldMessages[index];
+          displayMessage(message.name, message.message);
         }
       }
 
