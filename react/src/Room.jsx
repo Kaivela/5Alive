@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { useLoaderData } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import "./room.css";
 
 export default function Room() {
   const nameRef = useRef(0);
   const messageRef = useRef(0);
-  const { roomId } = useLoaderData();
+  const { roomId } = useParams();
   const [messages, setMessages] = useState([]);
   const messagesRef = useRef();
   messagesRef.current = messages;

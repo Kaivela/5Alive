@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import RoomList from "./assets/RoomsList";
 
 export default function Home() {
   const inputRef = useRef(0);
@@ -37,9 +38,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="roomList">
-        <h1>Room List</h1>
-      </div>
+      <RoomList />
       <div className="create-room">
         <div>
           <button
@@ -48,7 +47,7 @@ export default function Home() {
             disabled={disabledState}
           >
             Create Custom Room
-          </button>
+          </button>{" "}
           <input
             ref={inputRef}
             type="text"
